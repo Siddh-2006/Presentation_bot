@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voice RAG Tester</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+        button { padding: 10px 20px; font-size: 16px; margin: 10px 0; cursor: pointer; }
+        #log { background: #f4f4f4; padding: 15px; border-radius: 5px; height: 300px; overflow-y: auto; white-space: pre-wrap; font-family: monospace; }
+        .status-offline { color: red; font-weight: bold; }
+        .status-online { color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Real-Time Voice Bot</h1>
+    <p>Status: <span id="status" class="status-offline">Offline</span></p>
+    <button id="btnConnect">Connect & Speak</button>
+    <button id="btnDisconnect" disabled>Disconnect</button>
+    
+    <h3>Conversation Log:</h3>
+    <div id="log"></div>
+
+    <script>
+        let socket;
+        let micContext;
+        let processor;
+        let micStream;
+        let playContext;
+        let nextPlayTime = 0;
+
+        const btnConnect = document.getElementById('btnConnect');
+        const btnDisconnect = document.getElementById('btnDisconnect');
+        const statusEl = document.getElementById('status');
+        const logEl = document.getElementById('log');
+
+        function log(msg) {
+            logEl.textContent += msg + "\n";
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        btnConnect.onclick = async () => {
+            try {
+                // Initialize playback context for 24kHz Kokoro audio
+                playContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+                nextPlayTime = playContext.currentTime;
+
+                // Open WebSocket
+                socket = new WebSocket("ws://localhost:8000/ws/voice");
+                socket.binaryType = "arraybuffer";
+
+                socket.onopen = async () => {
+                    statusEl.textContent = "Online (Listening...)";
+                    statusEl.className = "status-online";
+                    btnConnect.disabled = true;
+                    btnDisconnect.disabled = false;
+                    log("Connected to server.");
+
+                    // Request Microphone access (16kHz for Whisper/Silero)
+                    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    micContext = new AudioContext({ sampleRate: 16000 });
+                    const source = micContext.createMediaStreamSource(micStream);
+                    
+                    // Deprecated but easiest for single-file testing without AudioWorklet blobs
+                    processor = micContext.createScriptProcessor(4096, 1, 1);
+                    
+                    source.connect(processor);
+                    processor.connect(micContext.destination);
+
+                    processor.onaudioprocess = (e) => {
+                        if (socket.readyState !== WebSocket.OPEN) return;
+                        
+                        const inputData = e.inputBuffer.getChannelData(0);
+                        const int16Data = new Int16Array(inputData.length);
+                        for (let i = 0; i < inputData.length; i++) {
+                            // Convert float32 from browser mic to int16 for backend
+                            int16Data[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
+                        }
+                        socket.send(int16Data.buffer);
+                    };
+                };
+
+                socket.onmessage = (event) => {
+                    if (typeof event.data === "string") {
+                        const msg = JSON.parse(event.data);
+                        if (msg.type === "transcript") {
+                            log("You: " + msg.text);
+                        } else if (msg.type === "done") {
+                            log("--- AI finished speaking ---");
+                        }
+                    } else {
+                        // Received Binary Audio from Kokoro (Float32 at 24000 Hz)
+                        const float32Data = new Float32Array(event.data);
+                        const audioBuffer = playContext.createBuffer(1, float32Data.length, 24000);
+                        audioBuffer.getChannelData(0).set(float32Data);
+
+                        const source = playContext.createBufferSource();
+                        source.buffer = audioBuffer;
+                        source.connect(playContext.destination);
+
+                        const currentTime = playContext.currentTime;
+                        if (nextPlayTime < currentTime) nextPlayTime = currentTime;
+                        
+                        source.start(nextPlayTime);
+                        nextPlayTime += audioBuffer.duration;
+                    }
+                };
+
+                socket.onerror = (e) => log("WebSocket Error");
+                socket.onclose = () => stopAll();
+
+            } catch (err) {
+                log("Error: " + err.message);
+                stopAll();
+            }
+        };
+
+        btnDisconnect.onclick = () => stopAll();
+
+        function stopAll() {
+            if (socket) socket.close();
+            if (processor) processor.disconnect();
+            if (micContext) micContext.close();
+            if (micStream) micStream.getTracks().forEach(t => t.stop());
+            
+            statusEl.textContent = "Offline";
+            statusEl.className = "status-offline";
+            btnConnect.disabled = false;
+            btnDisconnect.disabled = true;
+            log("Disconnected.");
+        }
+    </script>
+</body>
+</html>

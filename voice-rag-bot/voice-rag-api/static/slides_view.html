@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PPT Slide Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a12;
+      color: #fff;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #slide-container {
+      width: 1280px; height: 720px;
+      max-width: 100vw; max-height: 100vh;
+      position: relative;
+      background: linear-gradient(135deg, #0d0d1f 0%, #111128 60%, #0d0d1f 100%);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 0 80px rgba(99,102,241,0.25);
+    }
+
+    /* Decorative gradient orbs */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .orb-1 { width: 500px; height: 500px; background: #6366f1; top: -150px; left: -150px; }
+    .orb-2 { width: 400px; height: 400px; background: #8b5cf6; bottom: -100px; right: -100px; }
+
+    /* Progress bar */
+    #progress-bar {
+      position: absolute; top: 0; left: 0;
+      height: 4px; background: linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa);
+      width: 0%;
+      transition: width 0.8s ease;
+      border-radius: 0 2px 2px 0;
+    }
+
+    /* Slide number badge */
+    #slide-badge {
+      position: absolute; top: 20px; right: 24px;
+      font-size: 13px; font-weight: 600;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 0.08em;
+    }
+
+    /* Title area */
+    #slide-title {
+      position: absolute;
+      top: 48px; left: 72px; right: 200px;
+      font-size: 13px; font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #818cf8;
+    }
+
+    /* Divider */
+    #slide-divider {
+      position: absolute;
+      top: 100px; left: 72px;
+      width: 60px; height: 3px;
+      background: linear-gradient(90deg, #6366f1, #8b5cf6);
+      border-radius: 2px;
+      transition: width 0.6s ease;
+    }
+
+    /* Main heading */
+    #slide-heading {
+      position: absolute;
+      top: 120px; left: 72px; right: 72px;
+      font-size: 52px; font-weight: 800;
+      line-height: 1.15;
+      color: #fff;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    /* Script / speaking text */
+    #slide-script {
+      position: absolute;
+      top: 300px; left: 72px; right: 72px; bottom: 90px;
+      font-size: 22px; font-weight: 400;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.75);
+      overflow: hidden;
+      transition: opacity 0.5s ease;
+    }
+
+    /* Notes area */
+    #slide-notes {
+      position: absolute;
+      bottom: 24px; left: 72px; right: 72px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.25);
+      font-style: italic;
+    }
+
+    /* Status pill */
+    #status-pill {
+      position: absolute;
+      top: 20px; left: 72px;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      background: rgba(99,102,241,0.2);
+      border: 1px solid rgba(99,102,241,0.4);
+      color: #818cf8;
+      padding: 4px 12px;
+      border-radius: 999px;
+      display: none;
+    }
+
+    /* Idle / connecting state */
+    #connecting {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px;
+    }
+    #connecting .logo {
+      font-size: 48px; font-weight: 800;
+      background: linear-gradient(90deg, #6366f1, #a78bfa);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    #connecting .sub {
+      font-size: 14px; color: rgba(255,255,255,0.35);
+      letter-spacing: 0.1em;
+    }
+    .dot-anim { display: inline-block; }
+    .dot-anim::after { content: ''; animation: dots 1.5s steps(4,end) infinite; }
+    @keyframes dots {
+      0%,100% { content: ''; }
+      25% { content: '.'; }
+      50% { content: '..'; }
+      75% { content: '...'; }
+    }
+
+    /* Slide enter animation */
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in { animation: slideIn 0.5s ease forwards; }
+  </style>
+</head>
+<body>
+
+<div id="slide-container">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div id="progress-bar"></div>
+  <div id="slide-badge">SLIDE 1</div>
+  <div id="status-pill">● LIVE</div>
+
+  <!-- Connecting splash -->
+  <div id="connecting">
+    <div class="logo">PPT·AI</div>
+    <div class="sub">Waiting for presentation<span class="dot-anim"></span></div>
+  </div>
+
+  <!-- Slide content (hidden until started) -->
+  <div id="slide-title" style="display:none"></div>
+  <div id="slide-divider" style="display:none"></div>
+  <div id="slide-heading" style="display:none"></div>
+  <div id="slide-script" style="display:none"></div>
+  <div id="slide-notes" style="display:none"></div>
+</div>
+
+<script>
+const HOST = location.host;
+let ws = null;
+let slideData = null;   // full slides array from server
+let currentSlide = 0;
+let totalSlides = 0;
+let connected = false;
+
+function connect() {
+  ws = new WebSocket(`ws://${HOST}/ppt/ws`);
+
+  ws.onopen = () => {
+    connected = true;
+    document.getElementById('status-pill').style.display = 'block';
+  };
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    handleMessage(msg);
+  };
+
+  ws.onclose = () => {
+    connected = false;
+    document.getElementById('status-pill').style.display = 'none';
+    setTimeout(connect, 2000);
+  };
+}
+
+function handleMessage(msg) {
+  const evt = msg.event || msg.status;
+
+  if (msg.slides) {
+    // Server sends full slide data on STARTED
+    slideData = msg.slides;
+    totalSlides = slideData.length;
+    showSlide(0);
+    document.getElementById('connecting').style.display = 'none';
+    return;
+  }
+
+  if (evt === 'SLIDE_ADVANCE' && msg.slide !== undefined) {
+    currentSlide = msg.slide;
+    if (slideData) showSlide(currentSlide);
+  }
+
+  if (evt === 'STARTED') {
+    document.getElementById('connecting').style.display = 'none';
+    document.getElementById('status-pill').style.display = 'block';
+    document.getElementById('status-pill').textContent = '● PRESENTING';
+  }
+
+  if (evt === 'QA_OPEN') {
+    document.getElementById('status-pill').textContent = '● Q&A OPEN';
+    document.getElementById('status-pill').style.background = 'rgba(34,197,94,0.15)';
+    document.getElementById('status-pill').style.borderColor = 'rgba(34,197,94,0.4)';
+    document.getElementById('status-pill').style.color = '#86efac';
+  }
+
+  if (evt === 'ENDED') {
+    document.getElementById('status-pill').textContent = '● SESSION ENDED';
+    document.getElementById('status-pill').style.background = 'rgba(100,116,139,0.15)';
+  }
+}
+
+function showSlide(idx) {
+  if (!slideData || idx >= slideData.length) return;
+  const slide = slideData[idx];
+  currentSlide = idx;
+
+  // Update progress bar
+  const pct = totalSlides > 1 ? ((idx / (totalSlides - 1)) * 100) : 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('slide-badge').textContent = `SLIDE ${idx + 1} / ${totalSlides}`;
+
+  // Populate content
+  document.getElementById('slide-title').textContent = slide.section || slide.title || '';
+  document.getElementById('slide-heading').textContent = slide.title || '';
+  document.getElementById('slide-script').textContent = (slide.script || []).join('  ');
+  document.getElementById('slide-notes').textContent = slide.notes ? '📝 ' + slide.notes : '';
+
+  // Show elements with animation
+  ['slide-title','slide-divider','slide-heading','slide-script','slide-notes'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.display = '';
+    el.classList.remove('animate-in');
+    void el.offsetWidth;  // force reflow
+    el.classList.add('animate-in');
+  });
+}
+
+connect();
+</script>
+</body>
+</html>

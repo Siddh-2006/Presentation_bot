@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPT Agent Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --success: #10b981;
+            
+            /* State colors */
+            --state-presenting: #10b981;
+            --state-listening: #f59e0b;
+            --state-thinking: #8b5cf6;
+            --state-responding: #3b82f6;
+            --state-idle: #94a3b8;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #0f172a;
+                --card-bg: #1e293b;
+                --text-main: #f8fafc;
+                --text-muted: #94a3b8;
+                --border-color: #334155;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+        h2 { font-size: 1.25rem; margin-bottom: 1rem; }
+
+        /* Form elements */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input[type="text"], input[type="file"], textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.25rem;
+            background: var(--bg-color);
+            color: var(--text-main);
+            font-family: inherit;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.25rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            color: white;
+        }
+
+        .btn-primary { background-color: var(--primary); }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-primary:disabled { background-color: var(--text-muted); cursor: not-allowed; }
+        
+        .btn-danger { background-color: var(--danger); }
+        .btn-danger:hover { background-color: var(--danger-hover); }
+
+        /* Status Banner */
+        #launch-status {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            display: none;
+        }
+        .status-success { background-color: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid var(--success); }
+        .status-error { background-color: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid var(--danger); }
+        
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 0.5rem;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Live Status Card */
+        #live-status-section { display: none; }
+        
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .bg-presenting { background-color: var(--state-presenting); }
+        .bg-listening { background-color: var(--state-listening); }
+        .bg-thinking { background-color: var(--state-thinking); }
+        .bg-responding { background-color: var(--state-responding); }
+        .bg-idle { background-color: var(--state-idle); }
+
+        .stat-line {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .current-sentence {
+            font-style: italic;
+            font-size: 1.125rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: var(--bg-color);
+            border-left: 4px solid var(--primary);
+            border-radius: 0.25rem;
+        }
+
+        /* Event Feed */
+        #event-feed-section { display: none; }
+        
+        .feed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .ws-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background-color: var(--state-idle); }
+        .dot.connected { background-color: var(--success); }
+        .dot.error { background-color: var(--danger); }
+
+        #event-log {
+            height: 300px;
+            overflow-y: auto;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+
+        .log-entry { margin-bottom: 0.25rem; word-break: break-word; }
+        .log-time { color: var(--text-muted); margin-right: 0.5rem; }
+        
+        .log-SPEAKING { color: var(--primary); }
+        .log-TRANSCRIPT { color: var(--state-listening); }
+        .log-RESPONDING { color: var(--success); }
+        .log-STATE_CHANGE { color: var(--text-muted); }
+
+        /* Empty State */
+        #empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- SECTION 1: Process Documents -->
+    <div class="card" id="process-panel">
+        <h1>Step 1: Process Knowledge</h1>
+        <p style="color: var(--text-muted); margin-bottom: 1rem;">Upload your files so the AI can read and index them before the meeting.</p>
+        <form id="process-form">
+            <div class="form-group">
+                <label for="document_file">Presentation Document (PDF/PPTX/DOCX)</label>
+                <input type="file" id="document_file" name="document_file" accept=".pdf,.pptx,.docx" required>
+            </div>
+            <div class="form-group">
+                <label for="script_file">Spoken Script (JSON)</label>
+                <input type="file" id="script_file" name="script_file" accept=".json" required>
+            </div>
+            <button type="submit" id="btn-process" class="btn-primary">Process Documents</button>
+        </form>
+        <div id="process-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 0.25rem; display: none;"></div>
+    </div>
+
+    <!-- SECTION 1.5: Launch Panel -->
+    <div class="card" id="launch-panel" style="display: none; opacity: 0.5; pointer-events: none; transition: opacity 0.3s ease;">
+        <h1>Step 2: Join Meeting</h1>
+        <form id="launch-form">
+            <input type="hidden" id="session_id_input" name="session_id">
+            <div class="form-group">
+                <label for="meeting_url">Meeting URL</label>
+                <input type="text" id="meeting_url" name="meeting_url" placeholder="https://meet.google.com/... or https://meet.jit.si/..." required>
+            </div>
+            <button type="submit" id="btn-launch" class="btn-primary">Launch Bot</button>
+        </form>
+        <div id="launch-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 0.25rem; display: none;"></div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="card" id="empty-state">
+        <p>Paste a meeting URL above and upload your slide JSON to get started.</p>
+    </div>
+
+    <!-- SECTION 2: Live Status Card -->
+    <div class="card" id="live-status-section">
+        <div class="status-header">
+            <h2>Live Status</h2>
+            <span id="state-badge" class="badge bg-idle">IDLE</span>
+        </div>
+        <div class="stat-line" id="slide-info">Slide 1 of ? &middot; Sentence 1</div>
+        <div class="current-sentence" id="current-sentence-text">Initializing...</div>
+        <div class="stat-line" id="interrupt-info">0 interruptions handled</div>
+        <div class="stat-line" id="uptime-info">Running for 0s</div>
+        <div style="margin-top: 1.5rem;">
+            <button id="btn-stop" class="btn-danger">Stop Bot</button>
+        </div>
+    </div>
+
+    <!-- SECTION 3: Live Event Feed -->
+    <div class="card" id="event-feed-section">
+        <div class="feed-header">
+            <h2>Event Log</h2>
+            <div class="ws-indicator">
+                <div class="dot" id="ws-dot"></div>
+                <span id="ws-status-text">Disconnected</span>
+            </div>
+        </div>
+        <div id="event-log"></div>
+    </div>
+</div>
+
+<script>
+    // Elements
+    const processForm = document.getElementById('process-form');
+    const launchForm = document.getElementById('launch-form');
+    const btnProcess = document.getElementById('btn-process');
+    const btnLaunch = document.getElementById('btn-launch');
+    const processStatus = document.getElementById('process-status');
+    const launchStatus = document.getElementById('launch-status');
+    const launchPanel = document.getElementById('launch-panel');
+    const sessionIdInput = document.getElementById('session_id_input');
+    const emptyState = document.getElementById('empty-state');
+    const liveStatusSection = document.getElementById('live-status-section');
+    const eventFeedSection = document.getElementById('event-feed-section');
+    const btnStop = document.getElementById('btn-stop');
+    
+    // Status elements
+    const stateBadge = document.getElementById('state-badge');
+    const slideInfo = document.getElementById('slide-info');
+    const currentSentenceText = document.getElementById('current-sentence-text');
+    const interruptInfo = document.getElementById('interrupt-info');
+    const uptimeInfo = document.getElementById('uptime-info');
+    
+    // Feed elements
+    const eventLog = document.getElementById('event-log');
+    const wsDot = document.getElementById('ws-dot');
+    const wsStatusText = document.getElementById('ws-status-text');
+
+    let ws = null;
+    let uptimeInterval = null;
+    let sessionStartTime = null;
+
+    // Helper: format time
+    function getTimestring() {
+        const d = new Date();
+        return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+    }
+
+    // Helper: add log entry
+    function addLog(type, message) {
+        const div = document.createElement('div');
+        div.className = `log-entry log-${type}`;
+        div.innerHTML = `<span class="log-time">[${getTimestring()}]</span> ${message}`;
+        eventLog.appendChild(div);
+        
+        // Keep max 200 lines
+        while (eventLog.children.length > 200) {
+            eventLog.removeChild(eventLog.firstChild);
+        }
+        // Auto scroll
+        eventLog.scrollTop = eventLog.scrollHeight;
+    }
+
+    // Connect WebSocket
+    function connectWS() {
+        if (ws) {
+            ws.close();
+        }
+        
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        // Fallback to localhost:8000 for local file testing
+        const host = window.location.host || 'localhost:8000';
+        const wsUrl = `${protocol}//${host}/ppt/ws`;
+        
+        ws = new WebSocket(wsUrl);
+        
+        ws.onopen = () => {
+            wsDot.className = 'dot connected';
+            wsStatusText.textContent = 'Connected';
+            addLog('STATE_CHANGE', 'WebSocket connected');
+        };
+        
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                
+                // Handle periodic status polls
+                if (data.status) {
+                    updateStatusUI(data);
+                } 
+                // Handle specific events
+                else if (data.event) {
+                    handleEvent(data);
+                }
+            } catch (e) {
+                console.error("Error parsing WS message", e);
+            }
+        };
+        
+        ws.onclose = () => {
+            wsDot.className = 'dot';
+            wsStatusText.textContent = 'Disconnected';
+            // Try to reconnect if we think session is active
+            if (liveStatusSection.style.display === 'block') {
+                setTimeout(connectWS, 3000);
+            }
+        };
+        
+        ws.onerror = () => {
+            wsDot.className = 'dot error';
+            wsStatusText.textContent = 'Error';
+        };
+    }
+
+    function updateStatusUI(data) {
+        // Update badge
+        const state = data.status.toLowerCase();
+        stateBadge.textContent = state.toUpperCase();
+        stateBadge.className = `badge bg-${state}`;
+        
+        // Update stats
+        slideInfo.innerHTML = `Slide ${data.slide} &middot; Sentence ${data.sentence}`;
+        interruptInfo.textContent = `${data.interrupts} interruptions handled`;
+        
+        // We calculate uptime locally for smoother UI, but sync occasionally
+        if (!sessionStartTime && data.uptime > 0) {
+            sessionStartTime = Date.now() - (data.uptime * 1000);
+            startUptimeTimer();
+        }
+        
+        // If state goes back to idle, handle cleanup
+        if (state === 'idle' && liveStatusSection.style.display === 'block') {
+            stopSession();
+        }
+    }
+
+    function handleEvent(data) {
+        switch(data.event) {
+            case 'SPEAKING':
+                currentSentenceText.textContent = `"${data.text}"`;
+                addLog('SPEAKING', `Bot: "${data.text}"`);
+                break;
+            case 'TRANSCRIPT':
+                addLog('TRANSCRIPT', `Human: "${data.text}"`);
+                break;
+            case 'RESPONDING':
+                addLog('RESPONDING', `Bot replies: "${data.text || 'Generating response...'}"`);
+                break;
+            case 'SLIDE_ADVANCE':
+                addLog('STATE_CHANGE', `Advanced to slide ${data.slide}: ${data.title}`);
+                break;
+            case 'STARTED':
+                addLog('STATE_CHANGE', `Session ${data.session_id} started`);
+                break;
+            case 'ENDED':
+                addLog('STATE_CHANGE', `Presentation ended`);
+                break;
+            case 'INTERRUPT':
+                addLog('STATE_CHANGE', `Interrupted by human`);
+                break;
+            case 'THINKING':
+                currentSentenceText.textContent = `Listening / Thinking...`;
+                break;
+            case 'RESUMED':
+                addLog('STATE_CHANGE', `Resuming presentation`);
+                break;
+            default:
+                console.log("Unhandled event:", data);
+        }
+    }
+
+    function startUptimeTimer() {
+        if (uptimeInterval) clearInterval(uptimeInterval);
+        uptimeInterval = setInterval(() => {
+            if (sessionStartTime) {
+                const s = Math.floor((Date.now() - sessionStartTime) / 1000);
+                uptimeInfo.textContent = `Running for ${s}s`;
+            }
+        }, 1000);
+    }
+
+    function showLiveUI() {
+        emptyState.style.display = 'none';
+        liveStatusSection.style.display = 'block';
+        eventFeedSection.style.display = 'block';
+        eventLog.innerHTML = '';
+        sessionStartTime = Date.now();
+        startUptimeTimer();
+        connectWS();
+    }
+
+    function stopSession() {
+        if (uptimeInterval) clearInterval(uptimeInterval);
+        sessionStartTime = null;
+        liveStatusSection.style.display = 'none';
+        eventFeedSection.style.display = 'none';
+        emptyState.style.display = 'block';
+        if (ws) {
+            ws.close();
+            ws = null;
+        }
+        launchStatus.style.display = 'none';
+        btnLaunch.disabled = false;
+        btnLaunch.innerHTML = 'Launch Bot';
+    }
+
+    // Form Submit (Step 1: Process)
+    processForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const docFile = processForm.document_file.files[0];
+        const scriptFile = processForm.script_file.files[0];
+        
+        if (!docFile || !scriptFile) return;
+
+        btnProcess.disabled = true;
+        btnProcess.innerHTML = '<span class="spinner"></span> Processing... (may take a few seconds)';
+        processStatus.style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('document_file', docFile);
+        formData.append('script_file', scriptFile);
+
+        try {
+            const baseUrl = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
+            const response = await fetch(`${baseUrl}/ppt/upload`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.session_id) {
+                processStatus.className = 'status-success';
+                processStatus.textContent = 'Files processed and knowledge embedded successfully!';
+                processStatus.style.display = 'block';
+                
+                // Unlock Step 2
+                sessionIdInput.value = result.session_id;
+                launchPanel.style.display = 'block';
+                launchPanel.style.opacity = '1';
+                launchPanel.style.pointerEvents = 'auto';
+                
+                btnProcess.innerHTML = 'Process Documents';
+                btnProcess.disabled = false;
+            } else {
+                processStatus.className = 'status-error';
+                processStatus.textContent = `Failed to process: ${result.error || result.status}`;
+                processStatus.style.display = 'block';
+                btnProcess.disabled = false;
+                btnProcess.innerHTML = 'Process Documents';
+            }
+        } catch (error) {
+            console.error("Upload error:", error);
+            processStatus.className = 'status-error';
+            processStatus.textContent = `Connection error: ${error.message}`;
+            processStatus.style.display = 'block';
+            btnProcess.disabled = false;
+            btnProcess.innerHTML = 'Process Documents';
+        }
+    });
+
+    // Form Submit (Step 2: Launch)
+    launchForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const url = launchForm.meeting_url.value;
+        const sessionId = sessionIdInput.value;
+        
+        if (!url || !sessionId) return;
+
+        btnLaunch.disabled = true;
+        btnLaunch.innerHTML = '<span class="spinner"></span> Joining Meeting...';
+        launchStatus.style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('meeting_url', url);
+        formData.append('session_id', sessionId);
+
+        try {
+            const baseUrl = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
+            const response = await fetch(`${baseUrl}/ppt/start`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.status === 'live') {
+                launchStatus.className = 'status-success';
+                launchStatus.textContent = 'Bot successfully joined the meeting!';
+                launchStatus.style.display = 'block';
+                showLiveUI();
+            } else {
+                launchStatus.className = 'status-error';
+                launchStatus.textContent = `Failed to join: ${result.error || result.status}`;
+                launchStatus.style.display = 'block';
+                btnLaunch.disabled = false;
+                btnLaunch.innerHTML = 'Launch Bot';
+            }
+        } catch (error) {
+            console.error("Start error:", error);
+            launchStatus.className = 'status-error';
+            launchStatus.textContent = `Connection error: ${error.message}`;
+            launchStatus.style.display = 'block';
+            btnLaunch.disabled = false;
+            btnLaunch.innerHTML = 'Launch Bot';
+        }
+    });
+
+    // Stop Button
+    btnStop.addEventListener('click', async () => {
+        try {
+            btnStop.disabled = true;
+            btnStop.textContent = 'Stopping...';
+            
+            const baseUrl = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
+            await fetch(`${baseUrl}/ppt/stop`, { method: 'POST' });
+            
+        } catch (error) {
+            console.error("Stop error:", error);
+        } finally {
+            btnStop.disabled = false;
+            btnStop.textContent = 'Stop Bot';
+            stopSession();
+        }
+    });
+
+    // Initial check to see if a session is already running
+    async function checkStatus() {
+        try {
+            const baseUrl = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
+            const response = await fetch(`${baseUrl}/ppt/status`);
+            const data = await response.json();
+            if (data.status && data.status !== 'idle') {
+                showLiveUI();
+                updateStatusUI(data);
+            }
+        } catch (e) {
+            // Ignore, likely not running
+        }
+    }
+    
+    // Create static folder if viewing directly for testing
+    checkStatus();
+</script>
+</body>
+</html>

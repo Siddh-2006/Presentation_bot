@@ -1,0 +1,40 @@
+# ── Meeting Automation ──────────────────────────────────────────
+playwright
+
+# ── Web Framework & API ─────────────────────────────────────────
+fastapi
+uvicorn
+websockets
+httpx
+python-multipart
+jinja2
+
+# ── LLM Providers ───────────────────────────────────────────────
+groq
+google-generativeai
+
+# ── Text-to-Speech ───────────────────────────────────────────────
+edge-tts
+
+# ── Audio Processing ─────────────────────────────────────────────
+sounddevice
+numpy
+scipy
+
+# ── VAD / ONNX Runtime (Silero VAD v4) ───────────────────────────
+onnxruntime
+
+# ── Vector Store ─────────────────────────────────────────────────
+chromadb
+sentence-transformers
+
+# ── Session State & Persistence ──────────────────────────────────
+redis
+supabase
+
+# ── Utilities ────────────────────────────────────────────────────
+python-dotenv
+pydantic
+asyncio
+aiofiles
+loguru

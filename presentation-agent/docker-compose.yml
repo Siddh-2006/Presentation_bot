@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  # ── Main Agent Service ──────────────────────────────────────────
+  agent:
+    image: python:3.11-slim
+    container_name: presentation_agent
+    working_dir: /app
+    volumes:
+      - .:/app                        # mount entire project
+      - audio_bus:/tmp/audio_bus      # shared audio pipe volume
+    ports:
+      - "8000:8000"                   # FastAPI dashboard API
+    env_file:
+      - .env
+    environment:
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - AUDIO_BUS_PATH=/tmp/audio_bus
+    depends_on:
+      - chromadb
+    command: >
+      sh -c "pip install -r requirements.txt --quiet &&
+             python -m playwright install chromium --with-deps &&
+             uvicorn api.server:app --host 0.0.0.0 --port 8000 --reload"
+    restart: unless-stopped
+
+  # ── ChromaDB Vector Store ───────────────────────────────────────
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: presentation_chroma
+    volumes:
+      - audio_bus:/tmp/audio_bus      # shared audio pipe volume
+    ports:
+      - "8001:8000"                   # ChromaDB HTTP API
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+      - ALLOW_RESET=true              # enable reset for dev/testing
+    restart: unless-stopped
+
+volumes:
+  audio_bus:
+    driver: local

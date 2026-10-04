@@ -1,0 +1,36 @@
+# Virtual Environment
+venv/
+env/
+.env
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Application specific
+bot_chrome_profile/
+chroma_db/
+chroma/
+data/
+pip_out.log
+*.log
+test_out_utf8.log
+
+# Audio and Media
+*.wav
+*.mp3
+*.mp4
+*.png
+*.jpg
+*.jpeg
+
+# Logs and Debug
+*.log
+failed_join_*.png
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+.gemini/

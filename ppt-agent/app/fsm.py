@@ -1,0 +1,1 @@
+# app/fsm.py — Presentation FSM: IDLE → PRESENTING → LISTENING → THINKING → RESPONDING
