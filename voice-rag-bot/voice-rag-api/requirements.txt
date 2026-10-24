@@ -16,4 +16,6 @@ requests
 pypdf
 python-pptx
 python-docx
+PyJWT
+Authlib
 pywin32; sys_platform == 'win32'
