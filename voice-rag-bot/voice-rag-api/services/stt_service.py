@@ -1,68 +1,41 @@
 import asyncio
-import tempfile
+import io
 import os
 import soundfile as sf
 import numpy as np
+from groq import Groq
+from loguru import logger
+
+def get_groq_client():
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError("[STT] GROQ_API_KEY is not configured.")
+    return Groq(api_key=api_key)
 
 async def transcribe_audio(app_state, audio_np: np.ndarray, sample_rate: int = 16000) -> str:
-    def _run_whisper():
-        import time
-        from loguru import logger
-        
-        start_t = time.time()
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
-            sf.write(f.name, audio_np, sample_rate)
-            fname = f.name
-        
-        groq_keys_env = os.getenv("GROQ_API_KEYS") or os.getenv("GROQ_API_KEY")
-        groq_keys = [k.strip() for k in groq_keys_env.split(",")] if groq_keys_env else []
-        
-        text = None
-        if groq_keys:
-            import requests
-            for key in groq_keys:
-                logger.info(f"[STT] Using Groq Cloud API (whisper-large-v3) with key ...{key[-4:]}...")
-                try:
-                    with open(fname, "rb") as file:
-                        response = requests.post(
-                            "https://api.groq.com/openai/v1/audio/transcriptions",
-                            headers={"Authorization": f"Bearer {key}"},
-                            data={
-                                "model": "whisper-large-v3",
-                                "language": "en",
-                                "response_format": "text"
-                            },
-                            files={"file": file},
-                            timeout=10
-                        )
-                    if response.status_code == 200:
-                        text = response.text.strip()
-                        break # Success
-                    else:
-                        logger.warning(f"[STT] Groq API error {response.status_code}: {response.text}")
-                except Exception as e:
-                    logger.warning(f"[STT] Groq API failed for key ...{key[-4:]} ({e})")
-                    continue
-        
-        if text is None:
-            # Fallback to local
-            if hasattr(app_state, "whisper") and app_state.whisper:
-                logger.info("[STT] Using LOCAL Model (Faster-Whisper distil-large-v3) for transcription...")
-                segments, _ = app_state.whisper.transcribe(
-                    fname,
-                    beam_size=5,       
-                    language="en",
-                    vad_filter=True,   
-                    word_timestamps=False,
-                )
-                text = " ".join(s.text for s in segments).strip()
-            else:
-                logger.warning("[STT] No Whisper model loaded locally and no Groq API Key found!")
-                text = ""
-                
-        os.unlink(fname)
-        dur = time.time() - start_t
-        logger.info(f"[STT] Transcription finished in {dur:.2f}s. Result: '{text}'")
-        return text
+    """
+    Transcribes audio slices via Groq's whisper-large-v3-turbo API.
+    Operates in-memory to avoid disk writes and GPU VRAM consumption.
+    """
+    def _run_groq_whisper():
+        wav_io = io.BytesIO()
+        sf.write(wav_io, audio_np, sample_rate, format='WAV', subtype='PCM_16')
+        wav_io.seek(0)
+        wav_io.name = "audio.wav"
 
-    return await asyncio.to_thread(_run_whisper)
+        client = get_groq_client()
+        model_name = os.getenv("GROQ_STT_MODEL", "whisper-large-v3-turbo")
+
+        try:
+            transcription = client.audio.transcriptions.create(
+                file=wav_io,
+                model=model_name,
+                language="en",
+                response_format="text"
+            )
+            return str(transcription).strip()
+        except Exception as e:
+            logger.error(f"[STT] Groq Whisper API error: {e}")
+            return ""
+
+    return await asyncio.to_thread(_run_groq_whisper)

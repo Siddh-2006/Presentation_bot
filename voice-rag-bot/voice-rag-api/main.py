@@ -24,7 +24,9 @@ load_dotenv()
 app = FastAPI(title="Voice RAG API", lifespan=lifespan)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+static_dir = os.path.join(BASE_DIR, "static")
+os.makedirs(static_dir, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # Setup CORS
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")
@@ -40,9 +42,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+jwt_secret = os.getenv("JWT_SECRET")
+if not jwt_secret:
+    raise RuntimeError("JWT_SECRET is not configured in the environment.")
+
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.getenv("JWT_SECRET", "super-secret-key-voxis")
+    secret_key=jwt_secret
 )
 
 # Include Routers

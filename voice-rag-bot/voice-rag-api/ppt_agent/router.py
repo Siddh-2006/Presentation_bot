@@ -180,16 +180,48 @@ async def start_presentation(
     status = "live" if joined else "failed"
 
     if joined:
-        # 6a. Start audio capture (wires VAD → presenter audio output)
+        # 6a. Start audio capture from Google Meet (fallback)
         await bot.start_audio_capture(vad)
 
-        # 6b. Start presenter loop as asyncio background task
+        # 6b. Start LOCAL physical microphone capture (primary VAD)
+        import sounddevice as sd
+        import numpy as np
+        _mic_frame_count = 0
+        def _mic_callback(indata, frames, time_info, status):
+            nonlocal _mic_frame_count
+            try:
+                _mic_frame_count += 1
+                if _mic_frame_count % 100 == 0:
+                    max_vol = np.max(np.abs(indata))
+                    logger.info(f"[Router Mic] Local mic running... max volume in last frame: {max_vol:.4f}")
+                
+                pcm16 = (indata[:, 0] * 32767).astype(np.int16).tobytes()
+                for start in range(0, len(pcm16) - 1023, 1024):
+                    frame = pcm16[start: start + 1024]
+                    if len(frame) == 1024:
+                        vad.process_frame("local_mic", frame)
+            except Exception:
+                pass
+                
+        try:
+            # mic_stream = sd.InputStream(samplerate=16000, channels=1, dtype='float32', blocksize=512, callback=_mic_callback)
+            # mic_stream.start()
+            # logger.info("[Router] Local physical microphone started for VAD!")
+            # _session_state_mic = mic_stream  # keep alive
+            _session_state_mic = None
+        except Exception as e:
+            logger.warning(f"[Router] Could not start local microphone: {e}")
+            _session_state_mic = None
+
+        # 6c. Start presenter loop as asyncio background task
         def _on_task_done(t: asyncio.Task):
             if t.cancelled():
                 return
             exc = t.exception()
             if exc:
-                logger.exception("[Presenter] run() task died", exc_info=exc)
+                logger.error(f"[Presenter] run() task died: {exc}")
+                import traceback
+                traceback.print_exception(type(exc), exc, exc.__traceback__)
 
         task = asyncio.create_task(presenter.run())
         task.add_done_callback(_on_task_done)
@@ -201,6 +233,7 @@ async def start_presentation(
             "presenter":   presenter,
             "bot":         bot,
             "vad":         vad,
+            "mic":         _session_state_mic,
             "task":        task,
             "event_queue": event_queue,
             "app_state":   request.app.state,
@@ -252,6 +285,14 @@ async def _stop():
             await bot.leave()
         except Exception as e:
             logger.warning(f"[Router] bot.leave() error: {e}")
+            
+    mic_stream = state.get("mic")
+    if mic_stream:
+        try:
+            mic_stream.stop()
+            mic_stream.close()
+        except Exception:
+            pass
 
     # Delete per-session RAG collection
     ss = state.get("session")

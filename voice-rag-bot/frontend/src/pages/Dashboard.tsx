@@ -3,6 +3,9 @@ import { motion } from 'framer-motion';
 import { Settings, Play, Mic, LogOut, StopCircle, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const WS_BASE = API_BASE.replace(/^http/, 'ws') + '/ppt/ws';
+
 const Dashboard = () => {
     const [user, setUser] = useState<{name: string, email: string, picture: string} | null>(null);
     const [loading, setLoading] = useState(true);
@@ -46,7 +49,7 @@ const Dashboard = () => {
             return;
         }
 
-        fetch('http://localhost:8000/auth/me', {
+        fetch(`${API_BASE}/auth/me`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(res => {
@@ -84,7 +87,7 @@ const Dashboard = () => {
         formData.append('script_file', scriptFile);
 
         try {
-            const res = await fetch('http://localhost:8000/ppt/upload', {
+            const res = await fetch(`${API_BASE}/ppt/upload`, {
                 method: 'POST',
                 body: formData
             });
@@ -120,7 +123,7 @@ const Dashboard = () => {
         }
 
         try {
-            const res = await fetch('http://localhost:8000/ppt/start', {
+            const res = await fetch(`${API_BASE}/ppt/start`, {
                 method: 'POST',
                 body: formData
             });
@@ -163,7 +166,7 @@ const Dashboard = () => {
 
     const stopSession = async () => {
         try {
-            await fetch('http://localhost:8000/ppt/stop', { method: 'POST' });
+            await fetch(`${API_BASE}/ppt/stop`, { method: 'POST' });
         } catch (e) { console.error("Error stopping", e); }
         
         if (wsRef.current) {
@@ -177,7 +180,7 @@ const Dashboard = () => {
     const connectWS = () => {
         if (wsRef.current) wsRef.current.close();
         
-        const ws = new WebSocket('ws://localhost:8000/ppt/ws');
+        const ws = new WebSocket(WS_BASE);
         wsRef.current = ws;
 
         ws.onopen = () => addLog('STATE', 'WebSocket Connected');

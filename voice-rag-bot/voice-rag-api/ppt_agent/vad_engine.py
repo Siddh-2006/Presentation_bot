@@ -60,7 +60,7 @@ class VADEngine:
         prob  = self.model(audio.unsqueeze(0), 16000).item()
 
         if prob > 0.01:
-            logger.debug(f"[VAD DIAGNOSTIC] Stream {stream_id} prob: {prob:.4f} (is_speech: {prob >= self.SPEECH_THRESH})")
+            logger.info(f"[VAD DIAGNOSTIC] Stream {stream_id} prob: {prob:.4f} (is_speech: {prob >= self.SPEECH_THRESH})")
 
         is_speech = prob >= self.SPEECH_THRESH
 

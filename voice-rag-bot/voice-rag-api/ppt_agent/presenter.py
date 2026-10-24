@@ -127,67 +127,73 @@ class Presenter:
         self._last_synced_slide_idx = 0
 
         while self.session.state != State.IDLE:
-
-            # ── Not presenting — yield for interrupt pipeline to finish ────────
-            if self.session.state == State.QA_OPEN:
-                await self._run_qa_window()
-                continue
-
-            if self.session.state != State.PRESENTING:
-                await asyncio.sleep(0.05)
-                continue
-
-            slide_idx    = self.session.slide_index
-            sentence_idx = self.session.sentence_index
-            sentence     = self.store.get_sentence(slide_idx, sentence_idx)
-
-            # ── sentence_index ran off the end of this slide ──────────────────
-            if sentence is None:
-                if slide_idx < self.store.get_slide_count() - 1:
-                    # Advance to next slide
-                    self.session.slide_index    += 1
-                    self.session.sentence_index  = 0
-                    slide_ctx = self.store.get_slide_context(self.session.slide_index)
-                    logger.info(
-                        f"[Presenter] Advancing to slide {self.session.slide_index}: "
-                        f"{slide_ctx.get('title', '')}"
-                    )
-                    self._emit("SLIDE_ADVANCE", slide=self.session.slide_index,
-                               title=slide_ctx.get("title", ""))
+            try:
+                # ── Not presenting — yield for interrupt pipeline to finish ────────
+                if self.session.state == State.QA_OPEN:
+                    await self._run_qa_window()
                     continue
-                else:
-                    # End of presentation — transition to Q&A window
-                    await self._speak_closing()
-                    continue
-
-            # ── Draw visual slide overlay if starting a new slide ─────────────
-            if sentence_idx == 0:
-                await self._update_slide_overlay(slide_idx)
-                # Sync local PowerPoint presentation or simulate keyboard flip
-                await asyncio.to_thread(self.sync_local_presentation, slide_idx)
-
-            # ── Speak the current sentence ────────────────────────────────────
-            logger.debug(
-                f"[Presenter] Slide {slide_idx} sentence {sentence_idx}: {sentence[:60]}..."
-            )
-            completed = await asyncio.to_thread(self._speak_sentence, sentence)
-
-            if completed:
-                # Wait for the browser to finish playing the audio before advancing
-                await self.bot.wait_for_audio_idle()
-                
-                # Check if we were interrupted *while* the browser was playing
-                if self.session.tts_kill.is_set():
-                    completed = False
-                else:
-                    self.fsm.handle("NEXT_SENTENCE")   # increments sentence_index
-            
-            if not completed:
-                # Interrupted mid-sentence — wait for handle_interrupt()
-                # to drive the FSM back to PRESENTING before re-entering the loop
-                logger.info("[Presenter] Sentence interrupted — pausing loop")
-                while self.session.state not in (State.PRESENTING, State.IDLE, State.QA_OPEN):
+    
+                if self.session.state != State.PRESENTING:
                     await asyncio.sleep(0.05)
+                    continue
+    
+                slide_idx    = self.session.slide_index
+                sentence_idx = self.session.sentence_index
+                sentence     = self.store.get_sentence(slide_idx, sentence_idx)
+    
+                # ── sentence_index ran off the end of this slide ──────────────────
+                if sentence is None:
+                    if slide_idx < self.store.get_slide_count() - 1:
+                        # Advance to next slide
+                        self.session.slide_index    += 1
+                        self.session.sentence_index  = 0
+                        slide_ctx = self.store.get_slide_context(self.session.slide_index)
+                        logger.info(
+                            f"[Presenter] Advancing to slide {self.session.slide_index}: "
+                            f"{slide_ctx.get('title', '')}"
+                        )
+                        self._emit("SLIDE_ADVANCE", slide=self.session.slide_index,
+                                   title=slide_ctx.get("title", ""))
+                        continue
+                    else:
+                        # End of presentation — transition to Q&A window
+                        await self._speak_closing()
+                        continue
+    
+                # ── Draw visual slide overlay if starting a new slide ─────────────
+                if sentence_idx == 0:
+                    await self._update_slide_overlay(slide_idx)
+                    # Sync local PowerPoint presentation or simulate keyboard flip
+                    await asyncio.to_thread(self.sync_local_presentation, slide_idx)
+    
+                # ── Speak the current sentence ────────────────────────────────────
+                logger.debug(
+                    f"[Presenter] Slide {slide_idx} sentence {sentence_idx}: {sentence[:60]}..."
+                )
+                completed = await asyncio.to_thread(self._speak_sentence, sentence)
+    
+                if completed:
+                    # Wait for the browser to finish playing the audio before advancing
+                    await self.bot.wait_for_audio_idle()
+                    
+                    # Check if we were interrupted *while* the browser was playing
+                    if self.session.tts_kill.is_set():
+                        completed = False
+                    else:
+                        self.fsm.handle("NEXT_SENTENCE")   # increments sentence_index
+                
+                if not completed:
+                    # Interrupted mid-sentence — wait for handle_interrupt()
+                    # to drive the FSM back to PRESENTING before re-entering the loop
+                    logger.info("[Presenter] Sentence interrupted — pausing loop")
+                    while self.session.state not in (State.PRESENTING, State.IDLE, State.QA_OPEN):
+                        await asyncio.sleep(0.05)
+                    
+            except Exception as e:
+                logger.error(f"[Presenter] Error in run loop: {e}")
+                import traceback
+                traceback.print_exc()
+                await asyncio.sleep(1.0)
 
     async def _update_slide_overlay(self, slide_idx: int):
         """Draws the current slide text onto the full-screen overlay for screen sharing."""
@@ -515,10 +521,9 @@ class Presenter:
         com_success = False
 
         # Initialize COM for the background worker thread
-        import pythoncom
-        pythoncom.CoInitialize()
-        
         try:
+            import pythoncom
+            pythoncom.CoInitialize()
             import win32com.client
             # Get active PowerPoint application object
             try:
@@ -555,7 +560,11 @@ class Presenter:
         except Exception as e:
             logger.warning(f"[PowerPoint COM] COM automation failed/unavailable: {e}")
         finally:
-            pythoncom.CoUninitialize()
+            if 'pythoncom' in locals():
+                try:
+                    pythoncom.CoUninitialize()
+                except Exception:
+                    pass
 
         # 2. Fallback: Key press simulation (Page Down / Page Up)
         if not com_success:

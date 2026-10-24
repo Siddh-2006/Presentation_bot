@@ -27,7 +27,6 @@ class MeetBot:
         "--enable-usermedia-screen-capturing",
         "--no-sandbox",
         "--disable-dev-shm-usage",
-        "--disable-gpu",
         "--disable-extensions",
         "--disable-background-networking",
         "--autoplay-policy=no-user-gesture-required",
@@ -38,6 +37,26 @@ class MeetBot:
     // Create global context immediately
     window._pptAudioCtx = window._pptAudioCtx || new AudioContext({ sampleRate: 24000 });
     window._pptDest     = window._pptDest || window._pptAudioCtx.createMediaStreamDestination();
+
+    // Create TrustedTypes policy in main page context so its callback stays alive forever
+    if (window.trustedTypes && window.trustedTypes.createPolicy) {
+        if (!window._pptGlobalPolicy) {
+            try {
+                window._pptGlobalPolicy = window.trustedTypes.createPolicy('ppt-global-policy', {
+                    createHTML: (string) => string
+                });
+            } catch (e) {
+                console.warn('[Bot] Failed to create global TrustedTypes policy', e);
+            }
+        }
+    }
+
+    // Unlock AudioContext on any user click (e.g. when Playwright clicks "Join now")
+    document.addEventListener('click', () => {
+        if (window._pptAudioCtx && window._pptAudioCtx.state === 'suspended') {
+            window._pptAudioCtx.resume().catch(e => console.warn('[Bot] AudioContext resume failed:', e));
+        }
+    }, { capture: true, once: true });
 
     // Hook enumerateDevices to ensure we report at least one audio input and one video input
     if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
@@ -146,7 +165,14 @@ class MeetBot:
         buf.copyToChannel(floats, 0);
         
         if (window._pptAudioCtx.state === 'suspended') {
-            await window._pptAudioCtx.resume();
+            try {
+                await Promise.race([
+                    window._pptAudioCtx.resume(),
+                    new Promise(r => setTimeout(r, 500))
+                ]);
+            } catch (e) {
+                console.warn("[Bot] AudioContext resume error:", e);
+            }
         }
         
         const src      = window._pptAudioCtx.createBufferSource();
@@ -155,8 +181,9 @@ class MeetBot:
         src.connect(window._pptDest);
         
         const now = window._pptAudioCtx.currentTime;
-        if (window._pptNextTime < now) {
-            window._pptNextTime = now;
+        // Add a 800ms buffer when starting a new audio stream to prevent initial load cracking
+        if (window._pptNextTime <= now) {
+            window._pptNextTime = now + 0.8;
         }
         
         window._pptNodes.push(src);
@@ -203,28 +230,7 @@ class MeetBot:
                     if (!ch0 || ch0.length === 0) return true;
                     const ch1 = input[1];
 
-                    // Diagnostic check for channel 0 vs channel 1
-                    if (this.frameCount % 100 === 0) {
-                        let maxAbsCh0 = 0;
-                        let maxAbsCh1 = 0;
-                        for (let i = 0; i < ch0.length; i++) {
-                            maxAbsCh0 = Math.max(maxAbsCh0, Math.abs(ch0[i]));
-                        }
-                        if (ch1) {
-                            for (let i = 0; i < ch1.length; i++) {
-                                maxAbsCh1 = Math.max(maxAbsCh1, Math.abs(ch1[i]));
-                            }
-                        }
-                        this.port.postMessage({
-                            debug: true,
-                            periodic: true,
-                            frameCount: this.frameCount,
-                            inputsLength: inputs ? inputs.length : -1,
-                            channelsInFirst: input.length,
-                            maxAmplitudeCh0: maxAbsCh0,
-                            maxAmplitudeCh1: maxAbsCh1
-                        });
-                    }
+                    // (Removed diagnostic check)
 
                     // Average both channels if stereo
                     const channel = new Float32Array(ch0.length);
@@ -253,24 +259,23 @@ class MeetBot:
                         this.nextRawIndex -= cutIdx;
                     }
 
-                    // Send 512-sample Int16 packages
-                    while (this.downsampledBuffer.length >= 512) {
-                        const frame = this.downsampledBuffer.slice(0, 512);
-                        this.downsampledBuffer = this.downsampledBuffer.slice(512);
+                    // Send 4096-sample Int16 packages
+                    while (this.downsampledBuffer.length >= 4096) {
+                        const frame = this.downsampledBuffer.slice(0, 4096);
+                        this.downsampledBuffer = this.downsampledBuffer.slice(4096);
 
-                        const int16 = new Int16Array(512);
+                        const int16 = new Int16Array(4096);
                         let maxInt16 = 0;
-                        for (let i = 0; i < 512; i++) {
+                        for (let i = 0; i < 4096; i++) {
                             const s = Math.max(-1, Math.min(1, frame[i]));
                             int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
                             maxInt16 = Math.max(maxInt16, Math.abs(int16[i]));
                         }
 
-                        if (this.frameCount % 100 === 0) {
-                            this.port.postMessage({
-                                debug: true,
-                                postDownsampleMax: maxInt16
-                            });
+                        // Send completely silent frames as a lightweight string to avoid CDP flooding
+                        if (maxInt16 === 0) {
+                            console.log("SILENCE:" + track.id + ":4096");
+                            continue;
                         }
 
                         this.port.postMessage(int16);
@@ -289,11 +294,19 @@ class MeetBot:
                 actualRate = ctx.sampleRate;
                 console.log("PPT_DEBUG: native rate=" + actualRate);
                 
+                // Add click listener to unlock AudioContext when Playwright clicks Join
+                document.addEventListener('click', () => {
+                    if (ctx && ctx.state === 'suspended') {
+                        ctx.resume().catch(e => console.warn('AudioContext resume failed:', e));
+                        console.log("PPT_HOOK: Capture AudioContext resumed on click!");
+                    }
+                }, { capture: true, once: true });
+
                 try {
                     await ctx.resume();
                     console.log("PPT_HOOK: AudioContext resumed, state=" + ctx.state);
                 } catch (err) {
-                    console.log("PPT_HOOK: AudioContext resume FAILED: " + err);
+                    console.log("PPT_HOOK: AudioContext resume FAILED (waiting for click): " + err);
                 }
 
                 try {
@@ -350,9 +363,13 @@ class MeetBot:
                         console.log("PPT_WORKLET_DEBUG: " + JSON.stringify(e.data));
                         return;
                     }
-                    const int16 = e.data; // Int16Array of size 512
+                    const int16 = e.data; // Int16Array of size 4096
                     const u8 = new Uint8Array(int16.buffer);
-                    const binary = String.fromCharCode.apply(null, u8);
+                    let binary = '';
+                    for (let i = 0; i < u8.length; i++) {
+                        binary += String.fromCharCode(u8[i]);
+                    }
+                    console.log("PPT_HOOK: voice detected on " + track.id);
                     console.log("PCM:" + track.id + ":" + btoa(binary));
                 };
                 console.log("PPT_HOOK: successfully connected AudioWorkletNode");
@@ -407,6 +424,37 @@ class MeetBot:
                 return origSetRemoteDescription.apply(this, arguments);
             };
             console.log("PPT_HOOK: RTCPeerConnection hooked");
+        }
+
+        // Hook 4: MutationObserver for dynamically added <audio> elements
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.tagName && node.tagName.toLowerCase() === 'audio') {
+                        console.log("PPT_HOOK: found new <audio> element in DOM");
+                        if (node.srcObject) hookStream(node.srcObject, "MutationObserver");
+                        node.addEventListener('play', () => {
+                            if (node.srcObject) hookStream(node.srcObject, "AudioEvent_play");
+                        });
+                        // Poll for srcObject in case it's set later without triggering setter
+                        const poller = setInterval(() => {
+                            if (node.srcObject) {
+                                hookStream(node.srcObject, "AudioPoller");
+                            }
+                        }, 1000);
+                        setTimeout(() => clearInterval(poller), 15000); // Stop polling after 15s
+                    }
+                });
+            });
+        });
+        
+        // Wait for DOM to be ready before observing
+        if (document.body || document.documentElement) {
+            observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+        } else {
+            window.addEventListener('DOMContentLoaded', () => {
+                observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+            });
         }
 
         console.log("PPT_HOOK: install complete");
@@ -613,6 +661,15 @@ class MeetBot:
                 except Exception:
                     pass
             
+            if not joined:
+                # Check if we bypassed the lobby and are already in the meeting
+                try:
+                    if await page.locator('button[aria-label*="Leave call" i], button[aria-label*="leave call" i]').is_visible(timeout=2000):
+                        joined = True
+                        logger.info("[Bot] Detected we are already in the meeting (bypassed lobby).")
+                except Exception:
+                    pass
+
             if not joined:
                 await page.screenshot(path="failed_join_gmeet.png")
                 logger.warning("[Bot] Could not find G-Meet join button. Screenshot saved to failed_join_gmeet.png")
@@ -872,7 +929,7 @@ class MeetBot:
                             let elements = Array.from(document.querySelectorAll('*'));
                             for (let el of elements) {{
                                 const content = (el.innerText || el.textContent || "").trim();
-                                if (content.toLowerCase() === text.toLowerCase()) {{
+                                if (content.toLowerCase().includes(text.toLowerCase())) {{
                                     el.click();
                                     return true;
                                 }}
@@ -880,7 +937,7 @@ class MeetBot:
                             return false;
                         }}''', text)
                         if found:
-                            logger.info(f"[Bot] Clicked 'Entire screen' option via text: {text}")
+                            logger.info(f"[Bot] Clicked 'Entire screen' option via text match: {text}")
                             break
                     else:
                         loc = page.locator(sel).first
@@ -941,10 +998,20 @@ class MeetBot:
                 b64_data = parts[2]
                 if self.vad_engine and self._vad_thread and self._vad_thread.is_alive():
                     self._vad_queue.put_nowait((stream_id, b64_data))
+        elif text.startswith("SILENCE:"):
+            parts = text.split(":", 2)
+            if len(parts) == 3:
+                import base64
+                stream_id = parts[1]
+                num_samples = int(parts[2])
+                silent_bytes = b'\x00' * (num_samples * 2)
+                b64_data = base64.b64encode(silent_bytes).decode("ascii")
+                if self.vad_engine and self._vad_thread and self._vad_thread.is_alive():
+                    self._vad_queue.put_nowait((stream_id, b64_data))
         elif text.startswith("PPT_WORKLET_DEBUG:"):
-            logger.debug(f"[Bot JS] {text}")
+            logger.info(f"[Bot JS] {text}")
         elif text.startswith("PPT_HOOK:"):
-            logger.debug(f"[Bot JS] {text}")
+            logger.info(f"[Bot JS] {text}")
         else:
             logger.debug(f"[BROWSER {msg.type}] {text}")
 
@@ -1087,18 +1154,11 @@ class MeetBot:
                         }}
                         
                         let safeHtml = `{escaped}`;
-                        if (window.trustedTypes && window.trustedTypes.createPolicy) {{
-                            if (!window._pptPolicy) {{
-                                try {{
-                                    window._pptPolicy = window.trustedTypes.createPolicy('ppt-policy', {{
-                                        createHTML: (string) => string
-                                    }});
-                                }} catch (e) {{
-                                    console.warn('Could not create TrustedTypes policy', e);
-                                }}
-                            }}
-                            if (window._pptPolicy) {{
-                                safeHtml = window._pptPolicy.createHTML(safeHtml);
+                        if (window._pptGlobalPolicy) {{
+                            try {{
+                                safeHtml = window._pptGlobalPolicy.createHTML(safeHtml);
+                            }} catch (e) {{
+                                console.error('Global policy createHTML failed:', e);
                             }}
                         }}
                         overlay.innerHTML = safeHtml;
@@ -1109,6 +1169,8 @@ class MeetBot:
             logger.info("[Bot] Slide injected into page overlay")
         except asyncio.TimeoutError:
             logger.error("[Bot] show_slide timed out waiting for page.evaluate")
+        except Exception as e:
+            logger.error(f"[Bot] show_slide failed: {e}")
 
     # ── Teardown ──────────────────────────────────────────────────────────────
 
