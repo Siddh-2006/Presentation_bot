@@ -20,10 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# 1. Install lightweight CPU PyTorch wheel and Python requirements
+# 1. Install lightweight CPU PyTorch & torchaudio wheels, then requirements
 COPY requirements.txt .
 RUN python -m pip install --upgrade pip && \
-    python -m pip install torch --index-url https://download.pytorch.org/whl/cpu && \
+    python -m pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu && \
     python -m pip install -r requirements.txt
 
 # 2. Install Playwright browser and system-level browser deps
