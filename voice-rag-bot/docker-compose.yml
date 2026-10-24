@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./voice-rag-api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./voice-rag-api/.env
+    ports:
+      - "8000:8000"
+    shm_size: '2gb'
+    volumes:
+      - voxis-data:/app/data/chroma_db
+      - hf-cache:/root/.cache
+      - bot-profile:/app/bot_chrome_profile
+
+volumes:
+  voxis-data:
+  hf-cache:
+  bot-profile:
