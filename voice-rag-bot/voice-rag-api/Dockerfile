@@ -20,9 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# 1. Install Python requirements first (leverages Docker layer cache)
+# 1. Install lightweight CPU PyTorch wheel and Python requirements
 COPY requirements.txt .
 RUN python -m pip install --upgrade pip && \
+    python -m pip install torch --index-url https://download.pytorch.org/whl/cpu && \
     python -m pip install -r requirements.txt
 
 # 2. Install Playwright browser and system-level browser deps
@@ -30,7 +31,7 @@ RUN python -m pip install playwright && \
     playwright install-deps chromium && \
     playwright install chromium
 
-# 3. Copy application codebase
+# 3. Copy application codebase (venv is excluded by .dockerignore)
 COPY . .
 
 # Ensure runtime directories exist
