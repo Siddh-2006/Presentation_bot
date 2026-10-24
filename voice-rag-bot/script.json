@@ -1,0 +1,264 @@
+{
+  "presentation_id": "demo_001",
+  "title": "Modern Search Architecture",
+  "total_slides": 10,
+  "metadata": {
+    "author": "AI & Search Engineering Team",
+    "created_at": "2026-10-05",
+    "version": "1.0.0",
+    "audience": "Search Engineers, AI Researchers, and System Architects"
+  },
+  "slides": [
+    {
+      "title": "Information Retrieval: The Core Problem",
+      "asset_type": "html",
+      "asset_payload": "<div style='font-family: Arial, sans-serif; padding: 40px; background: #0f172a; color: #f8fafc; height: 100%; border-radius: 8px;'><h1 style='color: #38bdf8; font-size: 32px;'>Information Retrieval: The Core Problem</h1><p style='font-size: 18px; color: #94a3b8;'>Bridging the gap between human intent and massive collections of unstructured data.</p><div style='margin-top: 40px; display: flex; justify-content: space-between; align-items: center;'><div style='background: #1e293b; padding: 20px; border-radius: 8px; width: 40%; text-align: center;'><h3>Fuzzy Human Intent</h3><p style='color: #cbd5e1;'>Conceptual & Ambiguous</p></div><div style='font-size: 24px; color: #38bdf8;'>\u2794 IR Bridge \u2794</div><div style='background: #1e293b; padding: 20px; border-radius: 8px; width: 40%; text-align: center;'><h3>Mathematical Models</h3><p style='color: #cbd5e1;'>Exact Relevance & Zettabyte Scale</p></div></div></div>",
+      "keywords": [
+        "information retrieval",
+        "IR",
+        "unstructured data",
+        "human intent",
+        "zettabyte era"
+      ],
+      "script": [
+        "Good morning everyone.",
+        "I\u2019ll start by introducing the basic idea behind Information Retrieval, or IR.",
+        "Information retrieval is the science of finding useful information from documents, finding the right documents themselves, and also searching through metadata that describes those documents.",
+        "The main challenge is that human information needs are usually fuzzy, conceptual, and sometimes ambiguous, while computers need mathematical representations to determine relevance.",
+        "On one side, we have huge amounts of unstructured data, and on the other, we have what the user actually wants.",
+        "So, we can think of information retrieval as a bridge between human intent and massive collections of data.",
+        "This problem becomes even more important in the zettabyte era, where without effective search systems, both internet-scale and enterprise databases would become extremely difficult to use."
+      ],
+      "notes": "Emphasize the contrast between fuzzy human intent and exact computer representations in the zettabyte era.",
+      "number": 1
+    },
+    {
+      "title": "Mechanical Foundations: From Catalogs to Lexical Models",
+      "asset_type": "html",
+      "asset_payload": "<div style='font-family: Arial, sans-serif; padding: 40px; background: #0f172a; color: #f8fafc; height: 100%; border-radius: 8px;'><h1 style='color: #38bdf8; font-size: 32px;'>Mechanical Foundations: From Catalogs to Lexical Models</h1><ul style='font-size: 18px; line-height: 1.8; color: #cbd5e1;'><li><strong>Physical Catalogs & Memex (1945):</strong> Vannevar Bush's early vision of digital information processing.</li><li><strong>Boolean Retrieval (1950s):</strong> Exact matching using AND, OR, NOT operators (suffered from precision/recall extremes).</li><li><strong>TF-IDF & Vector Space Model:</strong> Developed by Gerard Salton; represented documents as vectors in high-dimensional space using Term Frequency and Inverse Document Frequency.</li></ul></div>",
+      "keywords": [
+        "Memex",
+        "Boolean retrieval",
+        "TF-IDF",
+        "Vector Space Model",
+        "Gerard Salton"
+      ],
+      "script": [
+        "Before modern search engines existed, information was organized mainly through physical catalogs.",
+        "The slide then moves through the early conceptual development of information retrieval, including Vannevar Bush\u2019s idea of the Memex in 1945 and the beginning of digital information processing in the 1950s.",
+        "One of the earliest digital approaches was Boolean retrieval, where documents were retrieved using exact operators such as AND, OR, and NOT.",
+        "However, exact matching can produce either too few results or too many results.",
+        "This led to more sophisticated mathematical approaches such as TF-IDF.",
+        "Term Frequency measures how often a word appears, while Inverse Document Frequency reduces the importance of words that appear in many documents.",
+        "Another important development was the Vector Space Model, associated with Gerard Salton, where documents and queries are represented as vectors in a high-dimensional space.",
+        "These ideas formed the mathematical foundation for modern search."
+      ],
+      "notes": "Trace the historical lineage from Bush's Memex through Boolean systems to Salton's Vector Space Model and TF-IDF.",
+      "number": 2
+    },
+    {
+      "title": "The Web Era: Engineering for Massive Scale and Authority",
+      "asset_type": "html",
+      "asset_payload": "<div style='font-family: Arial, sans-serif; padding: 40px; background: #0f172a; color: #f8fafc; height: 100%; border-radius: 8px;'><h1 style='color: #38bdf8; font-size: 32px;'>The Web Era: Massive Scale & Authority</h1><div style='display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 30px;'><div style='background: #1e293b; padding: 15px; border-radius: 8px;'><h3>1. Crawling & Indexing</h3><p style='color: #94a3b8;'>Inverted Index mapping terms to documents.</p></div><div style='background: #1e293b; padding: 15px; border-radius: 8px;'><h3>2. BM25 Ranking</h3><p style='color: #94a3b8;'>Probabilistic model with TF saturation & length normalization.</p></div><div style='background: #1e293b; padding: 15px; border-radius: 8px;'><h3>3. Link Analysis</h3><p style='color: #94a3b8;'>PageRank & HITS leveraging graph authority.</p></div></div></div>",
+      "keywords": [
+        "web era",
+        "inverted index",
+        "BM25",
+        "PageRank",
+        "HITS",
+        "crawling"
+      ],
+      "script": [
+        "With the arrival of the web, information retrieval had to operate at a completely different scale.",
+        "A modern search architecture can be viewed as three major stages: crawling, indexing, and query processing.",
+        "Crawlers collect information from different web pages, and indexing organizes that information so it can be searched efficiently.",
+        "One of the most important structures is the inverted index, which maps a term to the documents where that term appears.",
+        "The slide also introduces BM25, a probabilistic ranking model that improves upon some limitations of TF-IDF by considering term-frequency saturation and document length normalization.",
+        "But relevance is not only about the words present on a page.",
+        "The authority of a page also matters.",
+        "Link-analysis methods such as PageRank and HITS use the structure of hyperlinks to estimate authority and improve ranking.",
+        "So the web era combined lexical relevance with large-scale authority analysis."
+      ],
+      "notes": "Highlight how web search combined inverted indexes, BM25 ranking, and link-based authority models like PageRank.",
+      "number": 3
+    },
+    {
+      "title": "The Neural Paradigm Shift: Matching Meaning, Not Strings",
+      "asset_type": "html",
+      "asset_payload": "<div style='font-family: Arial, sans-serif; padding: 40px; background: #0f172a; color: #f8fafc; height: 100%; border-radius: 8px;'><h1 style='color: #38bdf8; font-size: 32px;'>Sparse vs. Dense Retrieval</h1><table style='width: 100%; text-align: left; border-collapse: collapse; margin-top: 20px;'><tr style='border-bottom: 1px solid #334155; color: #38bdf8;'><th>Feature</th><th>Sparse Retrieval (BM25)</th><th>Dense Retrieval (Neural/BERT)</th></tr><tr style='border-bottom: 1px solid #334155;'><td style='padding: 10px 0;'>Matching</td><td>Exact keyword overlap</td><td>Semantic similarity space</td></tr><tr style='border-bottom: 1px solid #334155;'><td style='padding: 10px 0;'>Representation</td><td>High-dimensional, sparse</td><td>Lower-dimensional embeddings</td></tr><tr><td style='padding: 10px 0;'>Strengths / Weaknesses</td><td>Fast, transparent, handles exact IDs</td><td>Handles polysemy, higher latency</td></tr></table></div>",
+      "keywords": [
+        "neural retrieval",
+        "embeddings",
+        "Word2Vec",
+        "BERT",
+        "sparse retrieval",
+        "dense retrieval"
+      ],
+      "script": [
+        "The next major shift was from matching strings to matching meaning.",
+        "Traditional systems such as BM25 mainly depend on exact or closely related terms, while neural approaches represent words and documents in a semantic space.",
+        "Word embeddings such as Word2Vec and GloVe allow words to be represented as vectors, where semantically related concepts can appear closer together.",
+        "Transformers and models such as BERT take this further by capturing contextual relationships between words.",
+        "This helps solve problems such as polysemy, where the same word can have different meanings depending on context.",
+        "The slide compares sparse retrieval and dense retrieval.",
+        "Sparse retrieval uses high-dimensional representations, exact keyword overlap, and inverted indexes, while dense retrieval uses lower-dimensional embeddings, semantic similarity, and approximate nearest-neighbor search.",
+        "Dense retrieval is therefore much better at understanding meaning, although it can be less transparent and can introduce additional latency."
+      ],
+      "notes": "Contrast lexical precision with semantic understanding, addressing polysemy, Word2Vec, BERT, and approximate nearest neighbors.",
+      "number": 4
+    },
+    {
+      "title": "The Current Architecture: AI and the RAG Revolution",
+      "asset_type": "html",
+      "asset_payload": "<div style='font-family: Arial, sans-serif; padding: 40px; background: #0f172a; color: #f8fafc; height: 100%; border-radius: 8px;'><h1 style='color: #38bdf8; font-size: 32px;'>AI & The RAG Revolution</h1><div style='background: #1e293b; padding: 20px; border-radius: 8px; margin-top: 20px;'><p style='font-size: 18px; color: #e2e8f0;'><strong>Query</strong> \u2794 <strong>Vector DB (ANN Search)</strong> \u2794 <strong>Retrieved Context</strong> \u2794 <strong>LLM Generation</strong> \u2794 <strong>Grounded Answer</strong></p></div><ul style='margin-top: 20px; color: #cbd5e1; font-size: 16px;'><li>Grounds generative output to reduce hallucinations</li><li>Enables conversational dialogue and dynamic interaction</li><li>Requires trade-offs in vector database latency, throughput, and scale</li></ul></div>",
+      "keywords": [
+        "RAG",
+        "Retrieval-Augmented Generation",
+        "vector database",
+        "LLM",
+        "conversational search"
+      ],
+      "script": [
+        "Today, search is increasingly connected with generative AI through Retrieval-Augmented Generation, or RAG.",
+        "The architecture shown here has two major components: a retrieval engine and a generation engine.",
+        "The retrieval engine searches a vector database and pulls factual information using techniques such as approximate nearest-neighbor algorithms.",
+        "That retrieved information is then provided to an LLM, which can reason over it and generate a natural-language response.",
+        "This approach helps reduce hallucination by grounding generation in retrieved information.",
+        "The slide also highlights conversational search, where users move away from short keyword queries and interact with search systems using natural dialogue.",
+        "Finally, the vector database comparison shows that different platforms provide different trade-offs in latency, throughput, and use cases.",
+        "This makes the choice of retrieval infrastructure an important part of modern AI systems."
+      ],
+      "notes": "Detail the two-stage RAG paradigm (Retrieval Engine + Generation Engine) and how it mitigates LLM hallucinations.",
+      "number": 5
+    },
+    {
+      "title": "Application Domains: Where IR Architecture Creates Value",
+      "asset_type": "html",
+      "asset_payload": "<div style='font-family: Arial, sans-serif; padding: 40px; background: #0f172a; color: #f8fafc; height: 100%; border-radius: 8px;'><h1 style='color: #38bdf8; font-size: 32px;'>IR Application Domains</h1><div style='display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; color: #e2e8f0;'><div style='background: #1e293b; padding: 15px; border-radius: 6px;'><strong>Web Search:</strong> Scale & open-domain authority</div><div style='background: #1e293b; padding: 15px; border-radius: 6px;'><strong>E-Commerce:</strong> Intent, conversions & multimodal</div><div style='background: #1e293b; padding: 15px; border-radius: 6px;'><strong>Healthcare:</strong> Fragmented vocabularies & precision</div><div style='background: #1e293b; padding: 15px; border-radius: 6px;'><strong>Legal & Enterprise:</strong> Traceability, compliance & privacy</div></div></div>",
+      "keywords": [
+        "multimodal",
+        "e-commerce",
+        "healthcare IR",
+        "legal search",
+        "enterprise compliance"
+      ],
+      "script": [
+        "Information retrieval is not limited to web search.",
+        "It is now a core technology across many industries.",
+        "In web search, the goal is to operate at enormous scale while finding authoritative information across an open domain.",
+        "In e-commerce, retrieval is closely connected to user intent and conversion, with multimodal search allowing users to search through visual as well as textual information.",
+        "In healthcare, retrieval systems can help find critical patient information across fragmented vocabularies and records.",
+        "In legal and enterprise environments, search must focus not only on relevance but also on traceability, privacy, privilege exposure, and compliance.",
+        "The slide also gives entertainment as an example, where large-scale foundation models can help solve the cold-start problem.",
+        "These examples show that the underlying retrieval architecture changes according to the requirements of each domain."
+      ],
+      "notes": "Walk through domain-specific constraints across Web, E-commerce, Healthcare, Legal/Enterprise, and Entertainment.",
+      "number": 6
+    },
+    {
+      "title": "Case Study: Hybrid Search",
+      "asset_type": "html",
+      "asset_payload": "<div style='font-family: Arial, sans-serif; padding: 40px; background: #0f172a; color: #f8fafc; height: 100%; border-radius: 8px;'><h1 style='color: #38bdf8; font-size: 32px;'>Case Study: Hybrid Search</h1><p style='color: #cbd5e1; font-size: 16px;'>Query: <em>\"red Nike running shoes for men\"</em></p><div style='display: flex; gap: 20px; margin-top: 25px;'><div style='background: #1e293b; padding: 20px; border-radius: 8px; width: 50%;'><h3>BM25 (Lexical)</h3><p style='color: #94a3b8;'>Captures exact keywords (Nike, red, running).</p></div><div style='background: #1e293b; padding: 20px; border-radius: 8px; width: 50%;'><h3>Neural (Dense)</h3><p style='color: #94a3b8;'>Captures intent & synonyms for running footwear.</p></div></div><div style='margin-top: 20px; background: #0284c7; padding: 15px; text-align: center; border-radius: 8px; font-weight: bold;'>Reciprocal Rank Fusion (RRF) \u2794 Optimal Hybrid Ranking</div></div>",
+      "keywords": [
+        "hybrid search",
+        "Reciprocal Rank Fusion",
+        "RRF",
+        "BM25",
+        "neural search"
+      ],
+      "script": [
+        "This page presents a practical example of why modern systems often combine lexical and neural search.",
+        "Consider the query, 'red Nike running shoes for men.'",
+        "BM25 is very good at finding exact constraints and important keywords such as Nike, red, running, and shoes.",
+        "However, it can struggle with synonyms or related concepts, such as different ways of describing running shoes.",
+        "Neural search has the opposite strength: it understands semantic concepts and can recognize relationships between terms.",
+        "But it may miss exact constraints or specific details such as a particular brand.",
+        "Therefore, instead of choosing one approach over the other, production systems can combine both.",
+        "Reciprocal Rank Fusion, or RRF, combines the rankings produced by different retrieval systems.",
+        "The result is a hybrid system that can capture both exact lexical relevance and broader semantic relevance, improving the overall quality of search results."
+      ],
+      "notes": "Explain why production search engines leverage Reciprocal Rank Fusion (RRF) to merge BM25 exact constraints with neural context.",
+      "number": 7
+    },
+    {
+      "title": "Evaluation Metrics: Proving Reliability and Groundedness",
+      "asset_type": "html",
+      "asset_payload": "<div style='font-family: Arial, sans-serif; padding: 40px; background: #0f172a; color: #f8fafc; height: 100%; border-radius: 8px;'><h1 style='color: #38bdf8; font-size: 32px;'>Evaluation Metrics</h1><div style='display: flex; gap: 20px; margin-top: 20px;'><div style='background: #1e293b; padding: 20px; border-radius: 8px; width: 50%;'><h3>Classic IR Metrics</h3><ul style='color: #cbd5e1;'><li><strong>Precision & Recall</strong> (F1 score)</li><li><strong>NDCG:</strong> Measures ranking position quality</li></ul></div><div style='background: #1e293b; padding: 20px; border-radius: 8px; width: 50%;'><h3>RAG Groundedness Metrics</h3><ul style='color: #cbd5e1;'><li><strong>Context Precision & Recall</strong></li><li><strong>Faithfulness:</strong> Traceability of LLM claims to context</li></ul></div></div></div>",
+      "keywords": [
+        "evaluation metrics",
+        "NDCG",
+        "precision",
+        "recall",
+        "faithfulness",
+        "context precision"
+      ],
+      "script": [
+        "Building a search system is not enough; we also need to measure how well it performs.",
+        "Traditional information retrieval metrics include precision, recall, and NDCG.",
+        "Precision asks: out of all the results we returned, how many were actually relevant?",
+        "Recall asks: out of all the relevant documents that exist, how many did we successfully retrieve?",
+        "NDCG, or Normalized Discounted Cumulative Gain, evaluates ranking quality by giving greater importance to relevant results appearing near the top.",
+        "The F1 score provides a balance between precision and recall through their harmonic mean.",
+        "For RAG systems, we also need additional measures.",
+        "Context precision checks whether the retrieved information is actually useful, context recall checks whether the necessary information was retrieved, and faithfulness measures how well the generated claims can be traced back to retrieved context.",
+        "These metrics help evaluate both retrieval quality and the reliability of generated answers."
+      ],
+      "notes": "Distinguish between classic metrics (Precision, Recall, NDCG) and modern RAG evaluation dimensions (Context Precision/Recall, Faithfulness).",
+      "number": 8
+    },
+    {
+      "title": "Research Frontiers and Critical Ecosystem Risks",
+      "asset_type": "html",
+      "asset_payload": "<div style='font-family: Arial, sans-serif; padding: 40px; background: #0f172a; color: #f8fafc; height: 100%; border-radius: 8px;'><h1 style='color: #38bdf8; font-size: 32px;'>Frontiers & Ecosystem Risks</h1><ul style='font-size: 18px; line-height: 1.8; color: #cbd5e1;'><li><strong>Multimodal Retrieval:</strong> Unifying text, images, audio, and video spaces.</li><li><strong>Latency & Curse of Dimensionality:</strong> Computational cost of massive dense vector search.</li><li><strong>Security Threats:</strong> Prompt injection and vector database vulnerability.</li><li><strong>Information Contamination:</strong> AI-generated content feedback loops and source bias.</li></ul></div>",
+      "keywords": [
+        "multimodal",
+        "curse of dimensionality",
+        "prompt injection",
+        "information contamination",
+        "synthetic data feedback loops"
+      ],
+      "script": [
+        "As retrieval systems become more advanced, they also introduce new research challenges and risks.",
+        "One important direction is multimodal retrieval, where a system can search across different data types such as text, images, audio, and video.",
+        "Another challenge is latency and the curse of dimensionality.",
+        "Searching through extremely large dense vector collections while maintaining very low latency is computationally expensive.",
+        "There are also security and reliability concerns.",
+        "RAG systems can be vulnerable to prompt injection, and they can suffer from cold-start problems when historical data is unavailable.",
+        "Another important issue is source bias and information contamination.",
+        "If AI-generated content becomes part of the information ecosystem and is repeatedly retrieved and reused, automated systems could create feedback loops that amplify generated content.",
+        "Therefore, future retrieval systems must focus not only on relevance and speed, but also on security, privacy, data quality, and reliability."
+      ],
+      "notes": "Address emerging infrastructure risks including prompt injection, latency bottlenecks, and feedback loops caused by synthetic web content.",
+      "number": 9
+    },
+    {
+      "title": "The 2030 Horizon: From Indexing to Agentic Intelligence",
+      "asset_type": "html",
+      "asset_payload": "<div style='font-family: Arial, sans-serif; padding: 40px; background: #0f172a; color: #f8fafc; height: 100%; border-radius: 8px;'><h1 style='color: #38bdf8; font-size: 32px;'>The 2030 Horizon: Agentic Intelligence</h1><div style='background: #1e293b; padding: 20px; border-radius: 8px; text-align: center; margin-top: 20px;'><h3 style='color: #38bdf8;'>Plan \u2794 Search \u2794 Reason \u2794 Synthesize</h3><p style='color: #cbd5e1;'>Autonomous agents as Generative Information Intermediaries</p></div><ul style='margin-top: 20px; color: #cbd5e1;'><li><strong>Inference Inversion:</strong> Retrieval and search computation outgrowing model training cost</li><li><strong>Vertical AI Sovereignty:</strong> Deep domain-specific integration (biomedical, legal)</li></ul></div>",
+      "keywords": [
+        "agentic intelligence",
+        "generative information intermediary",
+        "inference inversion",
+        "vertical AI",
+        "future of search"
+      ],
+      "script": [
+        "Finally, we come to the future direction of information retrieval.",
+        "The slide describes a shift from traditional indexing toward agentic intelligence.",
+        "Earlier retrieval systems mainly catalogued information and returned documents.",
+        "Modern systems are moving toward autonomous agents that can plan, search, reason, and synthesize information.",
+        "The diagram presents this as a continuous cycle: first the system plans, then it searches for relevant information, reasons over that information, and finally synthesizes an answer.",
+        "The slide also introduces the idea of a Generative Information Intermediary, where retrieval and generation become closely integrated.",
+        "Another important concept is inference inversion, where the computational cost of searching and retrieving information could become increasingly significant compared with the computation used to train models.",
+        "Finally, vertical AI and sovereignty suggest a move toward deeply integrated, domain-specific systems, particularly in areas such as biomedical and legal applications.",
+        "So, the overall journey of information retrieval is from catalogs, to search engines, to semantic retrieval, to RAG, and ultimately toward intelligent agents that can actively retrieve, reason, and synthesize information.",
+        "To conclude, information retrieval has evolved from simple cataloguing and keyword matching into a sophisticated architecture combining lexical methods, neural representations, vector databases, generative AI, and autonomous agents.",
+        "The fundamental goal, however, remains the same: connecting people with the information they need.",
+        "What is changing is how intelligently and efficiently that connection can be made.",
+        "Information retrieval is therefore no longer just a component behind search engines; it is becoming a foundational layer for modern AI systems."
+      ],
+      "notes": "Conclude by highlighting agentic loops (plan, search, reason, synthesize), inference inversion, and IR as the core layer of future AI systems.",
+      "number": 10
+    }
+  ]
+}
