@@ -1,5 +1,3 @@
-import React from 'react';
-
 const OrbBackground = () => {
     return (
         <div className="orb-background-container">

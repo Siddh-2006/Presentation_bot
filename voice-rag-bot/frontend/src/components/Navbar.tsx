@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LogIn, LayoutDashboard, Bot } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const Navbar = () => {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -31,15 +33,14 @@ const Navbar = () => {
                     <Link to="/use-cases">Use Cases</Link>
                     <Link to="/pricing">Pricing</Link>
                     
-                    {isLoggedIn ? (
-                        <Link to="/dashboard" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-                            <LayoutDashboard size={18} />
-                            Dashboard
-                        </Link>
-                    ) : (
-                        <a href="http://localhost:8000/auth/login" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Link to="/dashboard" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+                        <LayoutDashboard size={18} />
+                        Dashboard
+                    </Link>
+                    {!isLoggedIn && (
+                        <a href={`${API_BASE}/auth/login`} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <LogIn size={18} />
-                            Login with Google
+                            Google Login
                         </a>
                     )}
                 </div>

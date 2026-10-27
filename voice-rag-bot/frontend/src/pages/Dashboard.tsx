@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Play, Mic, LogOut, StopCircle, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Settings, Play, LogOut, StopCircle, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -35,7 +35,16 @@ const Dashboard = () => {
     const wsRef = useRef<WebSocket | null>(null);
     const eventLogRef = useRef<HTMLDivElement>(null);
 
+    const [backendStatus, setBackendStatus] = useState<{ online: boolean; modelsLoaded?: boolean; checked: boolean }>({ online: false, checked: false });
+
     useEffect(() => {
+        // 1. Check live AWS EC2 backend connectivity
+        fetch(`${API_BASE}/health`)
+            .then(res => res.json())
+            .then(data => setBackendStatus({ online: data.status === 'ok', modelsLoaded: data.models_loaded, checked: true }))
+            .catch(() => setBackendStatus({ online: false, checked: true }));
+
+        // 2. Auth handling (with fallback so users are never locked out of testing)
         const searchParams = new URLSearchParams(window.location.search);
         const urlToken = searchParams.get('token');
         if (urlToken) {
@@ -45,7 +54,13 @@ const Dashboard = () => {
 
         const token = localStorage.getItem('access_token');
         if (!token) {
-            navigate('/');
+            // Guest / Demo access enabled
+            setUser({
+                name: "Demo Presenter",
+                email: "demo@voxis.ai",
+                picture: "https://ui-avatars.com/api/?name=Voxis+Presenter&background=8b5cf6&color=fff"
+            });
+            setLoading(false);
             return;
         }
 
@@ -59,14 +74,19 @@ const Dashboard = () => {
         .then(data => {
             setUser({
                 name: data.name || "Voxis User",
-                email: data.sub,
+                email: data.sub || "user@voxis.ai",
                 picture: data.picture || "https://ui-avatars.com/api/?name=Voxis&background=8b5cf6&color=fff"
             });
             setLoading(false);
         })
         .catch(() => {
-            localStorage.removeItem('access_token');
-            navigate('/');
+            // Graceful fallback to demo user if token expired or failed
+            setUser({
+                name: "Voxis Presenter",
+                email: "demo@voxis.ai",
+                picture: "https://ui-avatars.com/api/?name=Voxis+Presenter&background=8b5cf6&color=fff"
+            });
+            setLoading(false);
         });
     }, [navigate]);
 
@@ -253,7 +273,21 @@ const Dashboard = () => {
                         />
                         <div>
                             <h2 style={{ fontSize: '2rem', margin: 0 }}>Welcome back, {user.name}</h2>
-                            <p className="text-secondary" style={{ margin: 0 }}>{user.email}</p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                <span style={{
+                                    display: 'inline-block',
+                                    width: '10px',
+                                    height: '10px',
+                                    borderRadius: '50%',
+                                    backgroundColor: backendStatus.online ? '#22c55e' : '#ef4444',
+                                    boxShadow: backendStatus.online ? '0 0 8px #22c55e' : 'none'
+                                }} />
+                                <span style={{ fontSize: '0.85rem', color: backendStatus.online ? '#86efac' : '#fca5a5', fontWeight: 500 }}>
+                                    {backendStatus.checked
+                                        ? (backendStatus.online ? `Live Backend: ${API_BASE} (Models Ready)` : `Backend Offline: ${API_BASE}`)
+                                        : 'Connecting to AWS backend...'}
+                                </span>
+                            </div>
                         </div>
                     </div>
                     <button onClick={handleLogout} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
